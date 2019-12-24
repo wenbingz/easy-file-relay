@@ -7,25 +7,30 @@ import java.net.Socket;
 import java.util.ArrayList;
 import java.util.List;
 
-public class DestHost {
-    private static String directoryName = "";
+public class ServerDestHost {
+    private static String directoryName = "/home/";
     private static FileOutputStream fos = null;
-    private static String localHostAddr = null;
-    private static String localHostPort = null;
+    private static String localHostAddr = "192.168.100.238";
+    private static String localHostPort = "14003";
     public static void main(String[] args) throws IOException {
         ServerSocket ss = new ServerSocket();
         ss.bind(new InetSocketAddress(localHostAddr, Integer.parseInt(localHostPort)));
         Socket receiver = ss.accept();
+        System.out.println("[dest] get connection");
         MessageDispatcher md = new MessageDispatcher(receiver.getInputStream());
         File file = null;
         while(true){
             byte[] dataPackage = md.getPackage();
             Message m = new Message(dataPackage);
             if(m.getTypeOfMessage() == Message.CONTROL_SIGNAL){
+
                 List<String> content = new ArrayList<>();
                 m.getControlMessage(content);
                 String c = content.get(0);
+                System.out.println(m.getTypeOfMessage() + " " + c + " " + " " + m.getLengthOfLoad() + "" + dataPackage[1] + " " +  dataPackage[2]+ " "
+                                                    + dataPackage[3] + " " + dataPackage[4]);
                 if(c.startsWith("BEGIN")){
+
                     if(file != null){
                         System.out.println("EXPECT NULL FILE OBJECT");
                     }
@@ -42,12 +47,19 @@ public class DestHost {
                 }
             }
             if(m.getTypeOfMessage() == Message.FILE_PACKAGE){
+                System.out.println("received file package --- " + m.getLengthOfLoad());
                 if(fos == null){
                     System.out.println("[FATAL]: FOS OBJECT SHOULD NOT BE NULL");
+                    System.exit(-1);
                 }
-                byte[] t = null;
+                List<byte[]> t = new ArrayList<>();
                 m.getFilePackage(t);
-                fos.write(t);
+                byte[] rrr = t.get(0);
+                for(int i = 0; i < rrr.length; ++ i){
+                    System.out.print(rrr[i] + " ");
+                }
+                System.out.println();
+                fos.write(t.get(0));
             }
         }
     }

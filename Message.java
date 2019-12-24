@@ -7,7 +7,7 @@ public class Message {
     public static final int CONTROL_SIGNAL = 1;
     private int typeOfMessage = -1;
     private int lengthOfLoad = 0;
-    private static int lengthOfPackage = 1024;
+    private static int lengthOfPackage = 4096;
     private int overallSize = 0;
     private byte[] dataPackage = null;
     private int offset = 0;
@@ -29,6 +29,7 @@ public class Message {
         this.dataPackage = dataPackage;
         if(((int)dataPackage[0]) == FILE_PACKAGE){
             this.typeOfMessage = FILE_PACKAGE;
+
         }else if(((int)dataPackage[0]) == CONTROL_SIGNAL){
             this.typeOfMessage = CONTROL_SIGNAL;
         }
@@ -41,11 +42,14 @@ public class Message {
         res.add(new String(Arrays.copyOfRange(this.dataPackage, 5, 5 + lengthOfLoad)));
         return true;
     }
-    public boolean getFilePackage(byte[] res){
+    public int getLengthOfLoad(){
+        return lengthOfLoad;
+    }
+    public boolean getFilePackage(List<byte[]> res){
         if(this.typeOfMessage != FILE_PACKAGE){
             return false;
         }
-        res = Arrays.copyOfRange(this.dataPackage, 5, 5 + lengthOfLoad);
+        res.add(Arrays.copyOfRange(this.dataPackage, 5, 5 + lengthOfLoad));
         return true;
     }
     private byte[] getIntegerInBytes(int integer){
@@ -54,13 +58,14 @@ public class Message {
         result[1] = (byte)((integer >> 16) & 0xFF);
         result[2] = (byte)((integer >> 8) & 0xFF);
         result[3] = (byte)(integer & 0xFF);
+        //System.out.println("****** " + (integer & 0xFF) + " " + integer);
         return result;
     }
     private int getIntegerFromBytes(byte[] bytes){
         if(bytes.length != 4){
             return -1;
         }
-        return (((int)(bytes[0])) << 24) + (((int)(bytes[1])) << 16) + (((int)(bytes[2])) << 8) + ((int)(bytes[0]));
+        return ((((int)(bytes[0])) & 0xff) << 24) + ((((int)(bytes[1])) & 0xff) << 16) + ((((int)(bytes[2])) & 0xff) << 8) + (((int)(bytes[3])) & 0xff);
     }
     public boolean setControlMessage(String controlMessage){
         if(typeOfMessage != CONTROL_SIGNAL){
@@ -79,6 +84,9 @@ public class Message {
         offset += message.length;
         return true;
     }
+    public static int getHeadLength(){
+        return headLength;
+    }
     public boolean setFilePackage(byte[] message, int length){
         if(typeOfMessage != FILE_PACKAGE){
             return false;
@@ -86,9 +94,11 @@ public class Message {
         lengthOfLoad = length;
         byte[] lengthBytes = getIntegerInBytes(lengthOfLoad);
         for(byte b: lengthBytes){
+            //System.out.println("&&& " + b);
             dataPackage[offset ++] = b;
         }
-        if(offset + lengthOfLoad >= overallSize){
+        if(offset + lengthOfLoad > overallSize){
+            System.out.println(offset + " " + lengthOfLoad + " " + overallSize);
             return false;
         }
         System.arraycopy(message, 0, dataPackage, offset, length);
